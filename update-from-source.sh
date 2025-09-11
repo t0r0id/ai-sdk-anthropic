@@ -7,29 +7,33 @@ AI_ROOT="/Users/t0r01d/Desktop/CognitoAI/dev/ai"
 
 echo "Starting update process..."
 
-# Step 1: Copy all files from SOURCE_DIR to DEST_DIR
+# Step 1: Delete everything from DEST_DIR except update-from-source.sh
+echo "Cleaning destination directory (keeping update-from-source.sh)..."
+find "$DEST_DIR" -mindepth 1 ! -name 'update-from-source.sh' ! -path "$DEST_DIR/.git" ! -path "$DEST_DIR/.git/*" -exec rm -rf {} + 2>/dev/null || true
+
+# Step 2: Copy all files from SOURCE_DIR to DEST_DIR
 echo "Copying files from $SOURCE_DIR to $DEST_DIR..."
 rsync -av \
   --exclude='.turbo' \
   --exclude='node_modules' \
   "$SOURCE_DIR/" "$DEST_DIR/"
 
-# Step 2: Copy .gitignore from ai repo root
+# Step 3: Copy .gitignore from ai repo root
 echo "Copying .gitignore from $AI_ROOT..."
 cp "$AI_ROOT/.gitignore" "$DEST_DIR/.gitignore"
 
-# Step 3: Remove dist from .gitignore
+# Step 4: Remove dist from .gitignore
 echo "Removing dist from .gitignore..."
 sed -i '' '/^dist$/d' "$DEST_DIR/.gitignore"
 sed -i '' '/^dist\/$/d' "$DEST_DIR/.gitignore"
 
-# Step 4: Update package.json dependencies and remove workspace references
+# Step 5: Update package.json dependencies and remove workspace references
 echo "Updating package.json dependencies..."
 if [ -f "$DEST_DIR/package.json" ]; then
   # Update the main dependencies
   sed -i '' 's/"@ai-sdk\/provider": "[^"]*"/"@ai-sdk\/provider": "2.0.0"/' "$DEST_DIR/package.json"
   sed -i '' 's/"@ai-sdk\/provider-utils": "[^"]*"/"@ai-sdk\/provider-utils": "3.0.8"/' "$DEST_DIR/package.json"
-  
+  sed -i '' 's/"@vercel\/ai-tsconfig": "[^"]*"/"@vercel\/ai-tsconfig": "0.0.0"/' "$DEST_DIR/package.json"
   # # Remove workspace dependencies (like @vercel/ai-tsconfig)
   # # Using a temporary file to handle complex JSON manipulation
   # node -e "
@@ -126,7 +130,7 @@ fi
 # echo "Running pnpm build..."
 # pnpm build
 
-# Step 7: Add changes, commit and push
+# Step 6: Add changes, commit and push
 echo "Committing and pushing changes..."
 git add -A
 git commit -m "Update from source repository with updated dependencies"
