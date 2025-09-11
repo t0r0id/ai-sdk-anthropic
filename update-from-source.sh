@@ -23,24 +23,108 @@ echo "Removing dist from .gitignore..."
 sed -i '' '/^dist$/d' "$DEST_DIR/.gitignore"
 sed -i '' '/^dist\/$/d' "$DEST_DIR/.gitignore"
 
-# Step 4: Update package.json dependencies
+# Step 4: Update package.json dependencies and remove workspace references
 echo "Updating package.json dependencies..."
 if [ -f "$DEST_DIR/package.json" ]; then
-  # Using sed to update the dependencies
+  # Update the main dependencies
   sed -i '' 's/"@ai-sdk\/provider": "[^"]*"/"@ai-sdk\/provider": "2.0.0"/' "$DEST_DIR/package.json"
   sed -i '' 's/"@ai-sdk\/provider-utils": "[^"]*"/"@ai-sdk\/provider-utils": "3.0.8"/' "$DEST_DIR/package.json"
+  
+  # # Remove workspace dependencies (like @vercel/ai-tsconfig)
+  # # Using a temporary file to handle complex JSON manipulation
+  # node -e "
+  #   const fs = require('fs');
+  #   const pkg = JSON.parse(fs.readFileSync('$DEST_DIR/package.json', 'utf8'));
+    
+  #   // Remove workspace dependencies from devDependencies
+  #   if (pkg.devDependencies) {
+  #     Object.keys(pkg.devDependencies).forEach(key => {
+  #       if (pkg.devDependencies[key].includes('workspace:')) {
+  #         delete pkg.devDependencies[key];
+  #       }
+  #     });
+  #   }
+    
+  #   // Ensure the main dependencies are set correctly
+  #   pkg.dependencies = pkg.dependencies || {};
+  #   pkg.dependencies['@ai-sdk/provider'] = '2.0.0';
+  #   pkg.dependencies['@ai-sdk/provider-utils'] = '3.0.8';
+    
+  #   fs.writeFileSync('$DEST_DIR/package.json', JSON.stringify(pkg, null, 2));
+  # "
 else
   echo "Warning: package.json not found, skipping dependency update"
 fi
 
-# Step 5: Run pnpm install
-echo "Running pnpm install..."
-cd "$DEST_DIR"
-pnpm install
+# Step 4b: Fix tsconfig.json files
+# echo "Fixing tsconfig.json files..."
 
-# Step 6: Run pnpm build
-echo "Running pnpm build..."
-pnpm build
+# # Fix main tsconfig.json
+# if [ -f "$DEST_DIR/tsconfig.json" ]; then
+#   node -e "
+#     const fs = require('fs');
+#     const tsconfig = {
+#       compilerOptions: {
+#         composite: true,
+#         rootDir: 'src',
+#         outDir: 'dist',
+#         target: 'ES2020',
+#         module: 'commonjs',
+#         lib: ['ES2020'],
+#         declaration: true,
+#         strict: true,
+#         esModuleInterop: true,
+#         skipLibCheck: true,
+#         forceConsistentCasingInFileNames: true,
+#         moduleResolution: 'node',
+#         resolveJsonModule: true
+#       },
+#       include: [
+#         'src/**/*'
+#       ],
+#       exclude: [
+#         'dist',
+#         'build',
+#         'node_modules',
+#         'tsup.config.ts',
+#         'internal.d.ts'
+#       ]
+#     };
+#     fs.writeFileSync('$DEST_DIR/tsconfig.json', JSON.stringify(tsconfig, null, 2));
+#   "
+# fi
+
+# # Fix tsconfig.build.json if it exists
+# if [ -f "$DEST_DIR/tsconfig.build.json" ]; then
+#   node -e "
+#     const fs = require('fs');
+#     const tsconfig = {
+#       extends: './tsconfig.json',
+#       include: [
+#         'src/**/*'
+#       ],
+#       exclude: [
+#         'src/**/*.test.ts',
+#         'src/**/*.spec.ts',
+#         'dist',
+#         'build',
+#         'node_modules',
+#         'tsup.config.ts',
+#         'internal.d.ts'
+#       ]
+#     };
+#     fs.writeFileSync('$DEST_DIR/tsconfig.build.json', JSON.stringify(tsconfig, null, 2));
+#   "
+# fi
+
+# # Step 5: Run pnpm install
+# echo "Running pnpm install..."
+# cd "$DEST_DIR"
+# pnpm install
+
+# # Step 6: Run pnpm build
+# echo "Running pnpm build..."
+# pnpm build
 
 # Step 7: Add changes, commit and push
 echo "Committing and pushing changes..."

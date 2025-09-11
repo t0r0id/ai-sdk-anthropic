@@ -1425,6 +1425,268 @@ describe('AnthropicMessagesLanguageModel', () => {
       });
     });
 
+    describe('web fetch', () => {
+      const TEST_PROMPT = [
+        {
+          role: 'user' as const,
+          content: [
+            {
+              type: 'text' as const,
+              text: 'Fetch and analyze the content at https://example.com/article',
+            },
+          ],
+        },
+      ];
+
+      function prepareJsonResponse(body: any) {
+        server.urls['https://api.anthropic.com/v1/messages'].response = {
+          type: 'json-value',
+          value: body,
+        };
+      }
+
+      it('should pass web fetch tool definition to the API', async () => {
+        prepareJsonResponse({
+          type: 'message',
+          id: 'msg_test',
+          content: [{ type: 'text', text: 'Content fetched and analyzed.' }],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        await model.doGenerate({
+          prompt: TEST_PROMPT,
+          tools: [
+            {
+              type: 'provider-defined',
+              id: 'anthropic.web_fetch_20250910',
+              name: 'web_fetch',
+              args: {},
+            },
+          ],
+        });
+
+        const requestBody = await server.calls[0].requestBodyJson;
+        expect(requestBody.tools).toHaveLength(1);
+        expect(requestBody.tools[0]).toEqual({
+          type: 'web_fetch_20250910',
+          name: 'web_fetch',
+        });
+      });
+
+      it('should include beta header for web fetch', async () => {
+        prepareJsonResponse({
+          type: 'message',
+          id: 'msg_test',
+          content: [{ type: 'text', text: 'Content fetched.' }],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        await model.doGenerate({
+          prompt: TEST_PROMPT,
+          tools: [
+            {
+              type: 'provider-defined',
+              id: 'anthropic.web_fetch_20250910',
+              name: 'web_fetch',
+              args: {},
+            },
+          ],
+        });
+
+        const headers = await server.calls[0].requestHeaders;
+        expect(headers['anthropic-beta']).toBe('web-fetch-2025-09-10');
+      });
+
+      it('should pass web fetch configuration with all parameters', async () => {
+        prepareJsonResponse({
+          type: 'message',
+          id: 'msg_test',
+          content: [{ type: 'text', text: 'Content analyzed.' }],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        await model.doGenerate({
+          prompt: TEST_PROMPT,
+          tools: [
+            {
+              type: 'provider-defined',
+              id: 'anthropic.web_fetch_20250910',
+              name: 'web_fetch',
+              args: {
+                maxUses: 5,
+                allowedDomains: ['example.com', 'docs.example.com'],
+                blockedDomains: ['spam.com'],
+                citations: true,
+                maxContentTokens: 15000,
+              },
+            },
+          ],
+        });
+
+        const requestBody = await server.calls[0].requestBodyJson;
+        expect(requestBody.tools).toHaveLength(1);
+        expect(requestBody.tools[0]).toEqual({
+          type: 'web_fetch_20250910',
+          name: 'web_fetch',
+          max_uses: 5,
+          allowed_domains: ['example.com', 'docs.example.com'],
+          blocked_domains: ['spam.com'],
+          citations: true,
+          max_content_tokens: 15000,
+        });
+      });
+
+      it('should handle web fetch with partial configuration', async () => {
+        prepareJsonResponse({
+          type: 'message',
+          id: 'msg_test',
+          content: [{ type: 'text', text: 'Document fetched.' }],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        await model.doGenerate({
+          prompt: TEST_PROMPT,
+          tools: [
+            {
+              type: 'provider-defined',
+              id: 'anthropic.web_fetch_20250910',
+              name: 'web_fetch',
+              args: {
+                maxUses: 2,
+                citations: false,
+              },
+            },
+          ],
+        });
+
+        const requestBody = await server.calls[0].requestBodyJson;
+        expect(requestBody.tools).toHaveLength(1);
+        expect(requestBody.tools[0]).toEqual({
+          type: 'web_fetch_20250910',
+          name: 'web_fetch',
+          max_uses: 2,
+          citations: false,
+        });
+      });
+
+      it('should handle web fetch tool result', async () => {
+        prepareJsonResponse({
+          type: 'message',
+          id: 'msg_test',
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool_1',
+              name: 'web_fetch',
+              input: { url: 'https://example.com/article' },
+            },
+            {
+              type: 'web_fetch_tool_result',
+              tool_use_id: 'tool_1',
+              content: {
+                url: 'https://example.com/article',
+                document_type: 'text/html',
+                content_source: 'web',
+                title: 'Example Article',
+                content: 'This is the article content...',
+                citations: [
+                  {
+                    text: 'Important fact',
+                    location: 'paragraph 3',
+                  },
+                ],
+              },
+            },
+            {
+              type: 'text',
+              text: 'I found the article and it contains important information.',
+            },
+          ],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 50, output_tokens: 100 },
+        });
+
+        const result = await model.doGenerate({
+          prompt: TEST_PROMPT,
+          tools: [
+            {
+              type: 'provider-defined',
+              id: 'anthropic.web_fetch_20250910',
+              name: 'web_fetch',
+              args: {
+                citations: true,
+              },
+            },
+          ],
+        });
+
+        expect(result.content).toMatchInlineSnapshot(`
+          [
+            {
+              "content": [
+                {
+                  "text": "I found the article and it contains important information.",
+                  "type": "text",
+                },
+              ],
+              "type": "tool-call",
+              "toolCallId": "tool_1",
+              "toolName": "web_fetch",
+            },
+          ]
+        `);
+      });
+
+      it('should support web fetch with function tools', async () => {
+        prepareJsonResponse({
+          type: 'message',
+          id: 'msg_test',
+          content: [{ type: 'text', text: 'Analysis complete.' }],
+          stop_reason: 'end_turn',
+          usage: { input_tokens: 10, output_tokens: 20 },
+        });
+
+        await model.doGenerate({
+          prompt: TEST_PROMPT,
+          tools: [
+            {
+              type: 'function',
+              name: 'analyzer',
+              description: 'Analyze data',
+              inputSchema: { type: 'object', properties: {} },
+            },
+            {
+              type: 'provider-defined',
+              id: 'anthropic.web_fetch_20250910',
+              name: 'web_fetch',
+              args: {
+                maxUses: 1,
+              },
+            },
+          ],
+        });
+
+        const requestBody = await server.calls[0].requestBodyJson;
+        expect(requestBody.tools).toHaveLength(2);
+
+        expect(requestBody.tools[0]).toEqual({
+          name: 'analyzer',
+          description: 'Analyze data',
+          input_schema: { type: 'object', properties: {} },
+        });
+
+        expect(requestBody.tools[1]).toEqual({
+          type: 'web_fetch_20250910',
+          name: 'web_fetch',
+          max_uses: 1,
+        });
+      });
+    });
+
     describe('code execution', () => {
       const TEST_PROMPT = [
         {
