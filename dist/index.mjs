@@ -154,9 +154,11 @@ var webFetch_20250910ArgsSchema = z4.object({
    */
   blockedDomains: z4.array(z4.string()).optional(),
   /**
-   * Whether to include citations in the fetched content.
+   * Configuration for citations in the fetched content.
    */
-  citations: z4.boolean().optional(),
+  citations: z4.object({
+    enabled: z4.boolean()
+  }).optional(),
   /**
    * Maximum number of tokens for the fetched content.
    */

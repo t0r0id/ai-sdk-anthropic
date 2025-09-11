@@ -19,9 +19,11 @@ export const webFetch_20250910ArgsSchema = z.object({
   blockedDomains: z.array(z.string()).optional(),
 
   /**
-   * Whether to include citations in the fetched content.
+   * Configuration for citations in the fetched content.
    */
-  citations: z.boolean().optional(),
+  citations: z.object({
+    enabled: z.boolean(),
+  }).optional(),
 
   /**
    * Maximum number of tokens for the fetched content.
@@ -78,9 +80,11 @@ const factory = createProviderDefinedToolFactoryWithOutputSchema<
     blockedDomains?: string[];
 
     /**
-     * Whether to include citations in the fetched content.
+     * Configuration for citations in the fetched content.
      */
-    citations?: boolean;
+    citations?: {
+      enabled: boolean;
+    };
 
     /**
      * Maximum number of tokens for the fetched content.

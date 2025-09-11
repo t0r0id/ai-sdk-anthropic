@@ -227,7 +227,9 @@ declare const anthropicTools: {
         maxUses?: number;
         allowedDomains?: string[];
         blockedDomains?: string[];
-        citations?: boolean;
+        citations?: {
+            enabled: boolean;
+        };
         maxContentTokens?: number;
     }>>[0]) => _ai_sdk_provider_utils.Tool<{
         url: string;

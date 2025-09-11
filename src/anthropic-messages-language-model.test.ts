@@ -1519,7 +1519,7 @@ describe('AnthropicMessagesLanguageModel', () => {
                 maxUses: 5,
                 allowedDomains: ['example.com', 'docs.example.com'],
                 blockedDomains: ['spam.com'],
-                citations: true,
+                citations: { enabled: true },
                 maxContentTokens: 15000,
               },
             },
@@ -1534,7 +1534,7 @@ describe('AnthropicMessagesLanguageModel', () => {
           max_uses: 5,
           allowed_domains: ['example.com', 'docs.example.com'],
           blocked_domains: ['spam.com'],
-          citations: true,
+          citations: { enabled: true },
           max_content_tokens: 15000,
         });
       });
@@ -1557,7 +1557,7 @@ describe('AnthropicMessagesLanguageModel', () => {
               name: 'web_fetch',
               args: {
                 maxUses: 2,
-                citations: false,
+                citations: { enabled: false },
               },
             },
           ],
@@ -1569,7 +1569,7 @@ describe('AnthropicMessagesLanguageModel', () => {
           type: 'web_fetch_20250910',
           name: 'web_fetch',
           max_uses: 2,
-          citations: false,
+          citations: { enabled: false },
         });
       });
 
@@ -1618,7 +1618,7 @@ describe('AnthropicMessagesLanguageModel', () => {
               id: 'anthropic.web_fetch_20250910',
               name: 'web_fetch',
               args: {
-                citations: true,
+                citations: { enabled: true },
               },
             },
           ],

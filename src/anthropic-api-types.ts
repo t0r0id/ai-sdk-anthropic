@@ -196,7 +196,9 @@ export type AnthropicTool =
       max_uses?: number;
       allowed_domains?: string[];
       blocked_domains?: string[];
-      citations?: boolean;
+      citations?: {
+        enabled: boolean;
+      };
       max_content_tokens?: number;
     }
   | {

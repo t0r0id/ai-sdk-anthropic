@@ -170,9 +170,11 @@ var webFetch_20250910ArgsSchema = import_v44.z.object({
    */
   blockedDomains: import_v44.z.array(import_v44.z.string()).optional(),
   /**
-   * Whether to include citations in the fetched content.
+   * Configuration for citations in the fetched content.
    */
-  citations: import_v44.z.boolean().optional(),
+  citations: import_v44.z.object({
+    enabled: import_v44.z.boolean()
+  }).optional(),
   /**
    * Maximum number of tokens for the fetched content.
    */
